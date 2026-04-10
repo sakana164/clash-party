@@ -24,6 +24,7 @@ import { deepMerge } from '../utils/merge'
 import { createLogger } from '../utils/logger'
 
 const factoryLogger = createLogger('Factory')
+const SMART_OVERRIDE_ID = 'smart-core-override'
 
 let runtimeConfigStr: string = ''
 let runtimeConfig: IMihomoConfig = {} as IMihomoConfig
@@ -68,7 +69,11 @@ export async function generateProfile(): Promise<string | undefined> {
     controlSniff = true,
     useNameserverPolicy
   } = await getAppConfig()
-  const currentProfile = await overrideProfile(current, await getProfile(current))
+  const baseProfile = await getProfile(current)
+  const overrideIds = await getOrderedOverrideIds(current)
+  const profileWithNormalOverride = await applyOverrides(baseProfile, overrideIds.normal)
+  const profileWithRuleOverride = await applyRuleOverride(current, profileWithNormalOverride)
+  const currentProfile = await applyOverrides(profileWithRuleOverride, overrideIds.smart)
   let controledMihomoConfig = await getControledMihomoConfig()
 
   // 根据开关状态过滤控制配置
@@ -82,60 +87,6 @@ export async function generateProfile(): Promise<string | undefined> {
   }
   if (!useNameserverPolicy) {
     delete controledMihomoConfig?.dns?.['nameserver-policy']
-  }
-
-  // 应用规则文件
-  try {
-    const ruleFilePath = rulePath(current || 'default')
-    if (existsSync(ruleFilePath)) {
-      const ruleFileContent = await readFile(ruleFilePath, 'utf-8')
-      const ruleData = parse(ruleFileContent) as {
-        prepend?: string[]
-        append?: string[]
-        delete?: string[]
-      } | null
-
-      if (ruleData && typeof ruleData === 'object') {
-        // 确保 rules 数组存在
-        if (!currentProfile.rules) {
-          currentProfile.rules = [] as unknown as []
-        }
-
-        let rules = [...currentProfile.rules] as unknown as string[]
-
-        // 处理前置规则
-        if (ruleData.prepend?.length) {
-          const { normalRules: prependRules, insertRules } = processRulesWithOffset(
-            ruleData.prepend,
-            rules
-          )
-          rules = [...prependRules, ...insertRules]
-        }
-
-        // 处理后置规则
-        if (ruleData.append?.length) {
-          const { normalRules: appendRules, insertRules } = processRulesWithOffset(
-            ruleData.append,
-            rules,
-            true
-          )
-          rules = [...insertRules, ...appendRules]
-        }
-
-        // 处理删除规则
-        if (ruleData.delete?.length) {
-          const deleteSet = new Set(ruleData.delete)
-          rules = rules.filter((rule) => {
-            const ruleStr = Array.isArray(rule) ? rule.join(',') : rule
-            return !deleteSet.has(ruleStr)
-          })
-        }
-
-        currentProfile.rules = rules as unknown as []
-      }
-    }
-  } catch (error) {
-    factoryLogger.error('Failed to read or apply rule file', error)
   }
 
   const profile = deepMerge(currentProfile, controledMihomoConfig)
@@ -158,6 +109,66 @@ export async function generateProfile(): Promise<string | undefined> {
     runtimeConfigStr
   )
   return current
+}
+
+async function applyRuleOverride(
+  current: string | undefined,
+  profile: IMihomoConfig
+): Promise<IMihomoConfig> {
+  try {
+    const ruleFilePath = rulePath(current || 'default')
+    if (!existsSync(ruleFilePath)) {
+      return profile
+    }
+
+    const ruleFileContent = await readFile(ruleFilePath, 'utf-8')
+    const ruleData = parse(ruleFileContent) as {
+      prepend?: string[]
+      append?: string[]
+      delete?: string[]
+    } | null
+
+    if (!ruleData || typeof ruleData !== 'object') {
+      return profile
+    }
+
+    if (!profile.rules) {
+      profile.rules = [] as unknown as []
+    }
+
+    let rules = [...profile.rules] as unknown as string[]
+
+    if (ruleData.prepend?.length) {
+      const { normalRules: prependRules, insertRules } = processRulesWithOffset(
+        ruleData.prepend,
+        rules
+      )
+      rules = [...prependRules, ...insertRules]
+    }
+
+    if (ruleData.append?.length) {
+      const { normalRules: appendRules, insertRules } = processRulesWithOffset(
+        ruleData.append,
+        rules,
+        true
+      )
+      rules = [...insertRules, ...appendRules]
+    }
+
+    if (ruleData.delete?.length) {
+      const deleteSet = new Set(ruleData.delete)
+      rules = rules.filter((rule) => {
+        const ruleStr = Array.isArray(rule) ? rule.join(',') : rule
+        return !deleteSet.has(ruleStr)
+      })
+    }
+
+    profile.rules = rules as unknown as []
+    return profile
+  } catch (error) {
+    factoryLogger.error('Failed to read or apply rule file', error)
+    return profile
+  }
 }
 
 async function prepareProfileWorkDir(current: string | undefined): Promise<void> {
@@ -193,14 +204,26 @@ async function prepareProfileWorkDir(current: string | undefined): Promise<void>
   ])
 }
 
-async function overrideProfile(
-  current: string | undefined,
-  profile: IMihomoConfig
-): Promise<IMihomoConfig> {
+async function getOrderedOverrideIds(current: string | undefined): Promise<{
+  normal: string[]
+  smart: string[]
+}> {
   const { items = [] } = (await getOverrideConfig()) || {}
   const globalOverride = items.filter((item) => item.global).map((item) => item.id)
   const { override = [] } = (await getProfileItem(current)) || {}
-  for (const ov of new Set(globalOverride.concat(override))) {
+  const orderedOverrideIds = [...new Set(globalOverride.concat(override))]
+
+  return {
+    normal: orderedOverrideIds.filter((id) => id !== SMART_OVERRIDE_ID),
+    smart: orderedOverrideIds.filter((id) => id === SMART_OVERRIDE_ID)
+  }
+}
+
+async function applyOverrides(
+  profile: IMihomoConfig,
+  overrideIds: string[]
+): Promise<IMihomoConfig> {
+  for (const ov of overrideIds) {
     const item = await getOverrideItem(ov)
     const content = await getOverride(ov, item?.ext || 'js')
     switch (item?.ext) {
