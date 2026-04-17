@@ -97,7 +97,7 @@ const ProxyItemBase: React.FC<Props> = (props) => {
                     mutateProxies()
                   }}
                   variant="light"
-                  className="h-[20px] p-0 text-sm"
+                  className="h-5 p-0 text-sm"
                 >
                   <FaMapPin className="text-md le" />
                 </Button>
@@ -151,7 +151,7 @@ const ProxyItemBase: React.FC<Props> = (props) => {
                     mutateProxies()
                   }}
                   variant="light"
-                  className="h-[20px] p-0 text-sm"
+                  className="h-5 p-0 text-sm"
                 >
                   <FaMapPin className="text-md le" />
                 </Button>

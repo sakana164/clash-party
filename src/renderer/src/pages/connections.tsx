@@ -32,8 +32,6 @@ import { HiSortAscending, HiSortDescending } from 'react-icons/hi'
 import { MdViewList, MdTableChart } from 'react-icons/md'
 import { HiOutlineAdjustmentsHorizontal } from 'react-icons/hi2'
 import { includesIgnoreCase } from '@renderer/utils/includes'
-import differenceWith from 'lodash/differenceWith'
-import unionWith from 'lodash/unionWith'
 import { useTranslation } from 'react-i18next'
 import { IoMdPause, IoMdPlay } from 'react-icons/io'
 import { saveIconToCache, getIconFromCache } from '@renderer/utils/icon-cache'
@@ -178,6 +176,11 @@ const Connections: React.FC = () => {
     viewMode
   ])
 
+  const filteredConnectionsRef = useRef<IMihomoConnectionDetail[]>([])
+  useEffect(() => {
+    filteredConnectionsRef.current = filteredConnections
+  }, [filteredConnections])
+
   const closeAllConnections = useCallback((): void => {
     tab === 'active' ? mihomoCloseAllConnections() : trashAllClosedConnection()
   }, [tab])
@@ -266,7 +269,7 @@ const Connections: React.FC = () => {
 
         setIconMap((prev) => ({ ...prev, [path]: processedDataURL }))
 
-        const firstConnection = filteredConnections[0]
+        const firstConnection = filteredConnectionsRef.current[0]
         if (firstConnection?.metadata.processPath === path) {
           setFirstItemRefreshTrigger((prev) => prev + 1)
         }
@@ -288,7 +291,7 @@ const Connections: React.FC = () => {
         processIconTimer.current = setTimeout(processIconQueue, 50)
       }
     }
-  }, [filteredConnections])
+  }, [])
 
   useEffect(() => {
     if (!displayIcon || findProcessMode === 'off') return
@@ -296,7 +299,7 @@ const Connections: React.FC = () => {
     const visiblePaths = new Set<string>()
     const otherPaths = new Set<string>()
 
-    const visibleConnections = filteredConnections.slice(0, 20)
+    const visibleConnections = filteredConnectionsRef.current.slice(0, 20)
     visibleConnections.forEach((c) => {
       const path = c.metadata.processPath || ''
       visiblePaths.add(path)
@@ -373,11 +376,11 @@ const Connections: React.FC = () => {
     iconMap,
     appNameCache,
     displayIcon,
-    filteredConnections,
     processIconQueue,
     processAppNameQueue,
     displayAppName,
-    findProcessMode
+    findProcessMode,
+    filteredConnections
   ])
 
   useEffect(() => {
@@ -386,11 +389,10 @@ const Connections: React.FC = () => {
       setConnectionsInfo(info)
 
       if (!info.connections) return
-      const allConns = unionWith(
-        activeConnectionsRef.current,
-        allConnectionsRef.current,
-        (a, b) => a.id === b.id
-      )
+      // O(n+m) merge using Map instead of O(n²) unionWith
+      const allConnsMap = new Map(allConnectionsRef.current.map((c) => [c.id, c]))
+      activeConnectionsRef.current.forEach((c) => allConnsMap.set(c.id, c))
+      const allConns = Array.from(allConnsMap.values())
 
       const prevConnMap = new Map(activeConnectionsRef.current.map((c) => [c.id, c]))
       const activeConns = info.connections.map((conn) => {
@@ -402,19 +404,22 @@ const Connections: React.FC = () => {
           uploadSpeed: preConn ? conn.upload - preConn.upload : 0
         }
       })
-      const closedConns = differenceWith(allConns, activeConns, (a, b) => a.id === b.id).map(
-        (conn) => ({
+      // O(n+m) difference using Set instead of O(n²) differenceWith
+      const activeIdSet = new Set(activeConns.map((c) => c.id))
+      const closedConns = allConns
+        .filter((c) => !activeIdSet.has(c.id))
+        .map((conn) => ({
           ...conn,
           isActive: false,
           downloadSpeed: 0,
           uploadSpeed: 0
-        })
-      )
+        }))
 
+      const sliced = allConns.slice(-(activeConns.length + 200))
       setActiveConnections(activeConns)
       setClosedConnections(closedConns)
-      setAllConnections(allConns.slice(-(activeConns.length + 200)))
-      cachedConnections = allConns
+      setAllConnections(sliced)
+      cachedConnections = sliced
     }
 
     if (!isPaused) {
@@ -553,7 +558,7 @@ const Connections: React.FC = () => {
             color={tab === 'active' ? 'primary' : 'danger'}
             selectedKey={tab}
             variant="underlined"
-            className="w-fit h-[32px]"
+            className="w-fit h-8"
             onSelectionChange={(key: Key) => {
               setTab(key as string)
             }}
@@ -656,7 +661,7 @@ const Connections: React.FC = () => {
               <Select
                 classNames={{ trigger: 'data-[hover=true]:bg-default-200' }}
                 size="sm"
-                className="w-[180px] min-w-[131px]"
+                className="w-45 min-w-32.75"
                 aria-label={t('connections.orderBy')}
                 selectedKeys={[connectionOrderBy]}
                 disallowEmptySelection={true}

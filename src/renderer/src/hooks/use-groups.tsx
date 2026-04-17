@@ -13,8 +13,8 @@ export const GroupsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const { data: groups, mutate } = useSWR<IMihomoMixedGroup[]>('mihomoGroups', mihomoGroups, {
     errorRetryInterval: 200,
     errorRetryCount: 10,
-    refreshInterval: 2000,
-    dedupingInterval: 1000,
+    refreshInterval: 30000,
+    dedupingInterval: 5000,
     keepPreviousData: true,
     revalidateOnFocus: false
   })
