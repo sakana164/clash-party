@@ -1,6 +1,8 @@
-import { readFile, rm, writeFile } from 'fs/promises'
-import { existsSync } from 'fs'
-import { join } from 'path'
+import { access, readFile, rm, writeFile } from 'fs/promises'
+import { constants, existsSync } from 'fs'
+import { execFile } from 'child_process'
+import { isAbsolute, join, relative, resolve } from 'path'
+import { promisify } from 'util'
 import { app } from 'electron'
 import i18next from 'i18next'
 import * as chromeRequest from '../utils/chromeRequest'
@@ -16,12 +18,63 @@ import { getAppConfig } from './app'
 import { getControledMihomoConfig } from './controledMihomo'
 
 const profileLogger = createLogger('Profile')
+const execFilePromise = promisify(execFile)
 
 let profileConfig: IProfileConfig
 let profileConfigWriteQueue: Promise<void> = Promise.resolve()
 let changeProfileQueue: Promise<void> = Promise.resolve()
 // 并发去重
 const inflightRemoteFetches = new Map<string, Promise<IProfileItem>>()
+
+function isPermissionError(error: unknown): boolean {
+  const code = (error as NodeJS.ErrnoException)?.code
+  return code === 'EACCES' || code === 'EPERM'
+}
+
+function assertInsideWorkDir(targetPath: string): void {
+  const relativePath = relative(resolve(mihomoWorkDir()), resolve(targetPath))
+  if (!relativePath || relativePath.startsWith('..') || isAbsolute(relativePath)) {
+    throw new Error(`Refusing to delete outside work directory: ${targetPath}`)
+  }
+}
+
+async function canRemoveProfileWorkDir(workDir: string): Promise<boolean> {
+  try {
+    await Promise.all([
+      access(mihomoWorkDir(), constants.W_OK | constants.X_OK),
+      access(workDir, constants.R_OK | constants.W_OK | constants.X_OK)
+    ])
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function removeProfileWorkDirWithPkexec(workDir: string): Promise<void> {
+  assertInsideWorkDir(workDir)
+  await execFilePromise('pkexec', ['rm', '-rf', '--', workDir])
+}
+
+async function removeProfileWorkDir(id: string): Promise<void> {
+  const workDir = mihomoProfileWorkDir(id)
+  if (!existsSync(workDir)) return
+  assertInsideWorkDir(workDir)
+
+  if (process.platform === 'linux' && !(await canRemoveProfileWorkDir(workDir))) {
+    await removeProfileWorkDirWithPkexec(workDir)
+    return
+  }
+
+  try {
+    await rm(workDir, { recursive: true, force: true })
+  } catch (error) {
+    if (process.platform !== 'linux' || !isPermissionError(error)) {
+      throw error
+    }
+
+    await removeProfileWorkDirWithPkexec(workDir)
+  }
+}
 
 export async function getProfileConfig(force = false): Promise<IProfileConfig> {
   if (force || !profileConfig) {
@@ -176,9 +229,7 @@ export async function removeProfileItem(id: string): Promise<void> {
   if (shouldRestart) {
     await restartCore()
   }
-  if (existsSync(mihomoProfileWorkDir(id))) {
-    await rm(mihomoProfileWorkDir(id), { recursive: true })
-  }
+  await removeProfileWorkDir(id)
 }
 
 export async function getCurrentProfileItem(): Promise<IProfileItem> {
