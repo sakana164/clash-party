@@ -6,7 +6,8 @@ import { tray } from '../resolve/tray'
 import { calcTraffic } from '../utils/calc'
 import { floatingWindow } from '../resolve/floatingWindow'
 import { createLogger } from '../utils/logger'
-import { getRuntimeConfig } from './factory'
+import { mihomoWorkConfigPath } from '../utils/dirs'
+import { generateProfile, getRuntimeConfig } from './factory'
 import { getMihomoIpcPath } from './manager'
 
 const mihomoApiLogger = createLogger('MihomoApi')
@@ -199,10 +200,8 @@ export const mihomoUpgradeUI = async (): Promise<void> => {
 
 export const mihomoHotReloadConfig = async (): Promise<void> => {
   mihomoApiLogger.info('mihomoHotReloadConfig called')
-  const { generateProfile } = await import('./factory')
   const current = await generateProfile()
   const { diffWorkDir = false } = await getAppConfig()
-  const { mihomoWorkConfigPath } = await import('../utils/dirs')
   const configPath = diffWorkDir ? mihomoWorkConfigPath(current) : mihomoWorkConfigPath('work')
   mihomoApiLogger.info(`hot reload config path: ${configPath}`)
   const instance = await getAxios()

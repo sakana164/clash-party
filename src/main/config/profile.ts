@@ -1,8 +1,10 @@
-import { access, readFile, rm, writeFile } from 'fs/promises'
+import { access, readFile, rm, unlink, writeFile } from 'fs/promises'
 import { constants, existsSync } from 'fs'
-import { execFile } from 'child_process'
+import { exec, execFile } from 'child_process'
 import { isAbsolute, join, relative, resolve } from 'path'
 import { promisify } from 'util'
+import { randomBytes } from 'crypto'
+import { tmpdir } from 'os'
 import { app } from 'electron'
 import i18next from 'i18next'
 import * as chromeRequest from '../utils/chromeRequest'
@@ -11,8 +13,15 @@ import { defaultProfile } from '../utils/template'
 import { subStorePort } from '../resolve/server'
 import { mihomoCloseAllConnections, mihomoHotReloadConfig } from '../core/mihomoApi'
 import { restartCore } from '../core/manager'
+import { generateProfile } from '../core/factory'
 import { addProfileUpdater, removeProfileUpdater } from '../core/profileUpdater'
-import { mihomoProfileWorkDir, mihomoWorkDir, profileConfigPath, profilePath } from '../utils/dirs'
+import {
+  mihomoCorePath,
+  mihomoProfileWorkDir,
+  mihomoWorkDir,
+  profileConfigPath,
+  profilePath
+} from '../utils/dirs'
 import { createLogger } from '../utils/logger'
 import { getAppConfig } from './app'
 import { getControledMihomoConfig } from './controledMihomo'
@@ -196,7 +205,6 @@ export async function addProfileItem(item: Partial<IProfileItem>): Promise<void>
     const { diffWorkDir } = await getAppConfig()
     if (diffWorkDir) {
       try {
-        const { generateProfile } = await import('../core/factory')
         await generateProfile()
       } catch (error) {
         profileLogger.warn('Failed to generate profile for new subscription', error)
@@ -421,7 +429,6 @@ export async function setProfileStr(id: string, content: string): Promise<void> 
       profileLogger.error('Failed to reload config', error)
       try {
         profileLogger.info('Falling back to restart core')
-        const { restartCore } = await import('../core/manager')
         await restartCore()
         profileLogger.info('Core restarted successfully')
       } catch (restartError) {
@@ -516,14 +523,7 @@ export async function setFileStr(path: string, content: string): Promise<void> {
 }
 
 export async function convertMrsRuleset(filePath: string, behavior: string): Promise<string> {
-  const { exec } = await import('child_process')
-  const { promisify } = await import('util')
   const execAsync = promisify(exec)
-  const { mihomoCorePath } = await import('../utils/dirs')
-  const { getAppConfig } = await import('./app')
-  const { tmpdir } = await import('os')
-  const { randomBytes } = await import('crypto')
-  const { unlink } = await import('fs/promises')
 
   const { core = 'mihomo' } = await getAppConfig()
   const corePath = mihomoCorePath(core)

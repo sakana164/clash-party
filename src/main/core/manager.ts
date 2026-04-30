@@ -42,7 +42,11 @@ import {
   getAxios
 } from './mihomoApi'
 import { generateProfile } from './factory'
-import { getSessionAdminStatus } from './permissions'
+import {
+  checkAdminRestartForTun as checkAdminRestartForTunWithRestart,
+  getSessionAdminStatus,
+  setStopCoreBeforeAdminRestart
+} from './permissions'
 import {
   cleanupSocketFile,
   cleanupWindowsNamedPipes,
@@ -378,6 +382,8 @@ export async function stopCore(force = false): Promise<void> {
   await cleanupSocketFile()
 }
 
+setStopCoreBeforeAdminRestart(stopCore)
+
 // 重启核心
 export async function restartCore(): Promise<void> {
   if (isRestarting) {
@@ -502,6 +508,5 @@ async function checkProfile(
 
 // 权限检查入口（从 permissions.ts 调用）
 export async function checkAdminRestartForTun(): Promise<void> {
-  const { checkAdminRestartForTun: check } = await import('./permissions')
-  await check(restartCore)
+  await checkAdminRestartForTunWithRestart(restartCore)
 }

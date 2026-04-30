@@ -4,10 +4,12 @@ import { stat } from 'fs/promises'
 import { existsSync } from 'fs'
 import path from 'path'
 import { app, dialog, ipcMain } from 'electron'
-import { getAppConfig, patchControledMihomoConfig } from '../config'
+import { getAppConfig, getControledMihomoConfig, patchControledMihomoConfig } from '../config'
 import { mihomoCorePath, mihomoCoreDir } from '../utils/dirs'
 import { managerLogger } from '../utils/logger'
+import { checkAutoRun, enableAutoRun } from '../sys/autoRun'
 import i18next from '../../shared/i18n'
+import { checkAdminPrivileges } from './admin'
 
 const execPromise = promisify(exec)
 const execFilePromise = promisify(execFile)
@@ -15,6 +17,13 @@ const execFilePromise = promisify(execFile)
 // 内核名称白名单
 const ALLOWED_CORES = ['mihomo', 'mihomo-alpha', 'mihomo-smart'] as const
 type AllowedCore = (typeof ALLOWED_CORES)[number]
+type StopCoreBeforeAdminRestart = (force?: boolean) => Promise<void>
+
+let stopCoreBeforeAdminRestart: StopCoreBeforeAdminRestart | null = null
+
+export function setStopCoreBeforeAdminRestart(stopCore: StopCoreBeforeAdminRestart): void {
+  stopCoreBeforeAdminRestart = stopCore
+}
 
 export function isValidCoreName(core: string): core is AllowedCore {
   return ALLOWED_CORES.includes(core as AllowedCore)
@@ -58,32 +67,7 @@ export function getSessionAdminStatus(): boolean {
   return sessionAdminStatus ?? false
 }
 
-export async function checkAdminPrivileges(): Promise<boolean> {
-  if (process.platform !== 'win32') {
-    return true
-  }
-
-  try {
-    await execPromise('chcp 65001 >nul 2>&1 && fltmc', { encoding: 'utf8' })
-    managerLogger.info('Admin privileges confirmed via fltmc')
-    return true
-  } catch (fltmcError: unknown) {
-    const errorCode = (fltmcError as { code?: number })?.code || 0
-    managerLogger.debug(`fltmc failed with code ${errorCode}, trying net session as fallback`)
-
-    try {
-      await execPromise('chcp 65001 >nul 2>&1 && net session', { encoding: 'utf8' })
-      managerLogger.info('Admin privileges confirmed via net session')
-      return true
-    } catch (netSessionError: unknown) {
-      const netErrorCode = (netSessionError as { code?: number })?.code || 0
-      managerLogger.debug(
-        `Both fltmc and net session failed, no admin privileges. Error codes: fltmc=${errorCode}, net=${netErrorCode}`
-      )
-      return false
-    }
-  }
-}
+export { checkAdminPrivileges } from './admin'
 
 export async function checkMihomoCorePermissions(): Promise<boolean> {
   const { core = 'mihomo' } = await getAppConfig()
@@ -260,9 +244,8 @@ export async function restartAsAdmin(forTun: boolean = true): Promise<void> {
 
   // 先停止 Core，避免新旧进程冲突
   try {
-    const { stopCore } = await import('./manager')
     managerLogger.info('Stopping core before admin restart...')
-    await stopCore(true)
+    await stopCoreBeforeAdminRestart?.(true)
     await new Promise((resolve) => setTimeout(resolve, 500))
   } catch (error) {
     managerLogger.warn('Failed to stop core before restart:', error)
@@ -342,7 +325,6 @@ export async function showErrorDialog(title: string, message: string): Promise<v
 export async function validateTunPermissionsOnStartup(
   _restartCore: () => Promise<void>
 ): Promise<void> {
-  const { getControledMihomoConfig } = await import('../config')
   const { tun } = await getControledMihomoConfig()
 
   if (!tun?.enable) {
@@ -378,7 +360,6 @@ export async function checkAdminRestartForTun(restartCore: () => Promise<void>):
         if (hasAdminPrivileges) {
           await patchControledMihomoConfig({ tun: { enable: true }, dns: { enable: true } })
 
-          const { checkAutoRun, enableAutoRun } = await import('../sys/autoRun')
           const autoRunEnabled = await checkAutoRun()
           if (autoRunEnabled) {
             await enableAutoRun()

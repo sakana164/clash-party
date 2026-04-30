@@ -12,6 +12,7 @@ import {
   profilePath,
   resourcesDir
 } from '../utils/dirs'
+import { checkAdminPrivileges } from '../core/admin'
 
 export function getFilePath(
   ext: string[],
@@ -43,7 +44,6 @@ export async function openUWPTool(): Promise<void> {
   const execFilePromise = promisify(execFile)
   const uwpToolPath = path.join(resourcesDir(), 'files', 'enableLoopback.exe')
 
-  const { checkAdminPrivileges } = await import('../core/manager')
   const isAdmin = await checkAdminPrivileges()
 
   if (!isAdmin) {
