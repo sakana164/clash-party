@@ -21,6 +21,7 @@ import templateIcon from '../../../resources/iconTemplate.png?asset'
 import {
   mihomoChangeProxy,
   mihomoCloseAllConnections,
+  mihomoGroupDelay,
   mihomoGroups,
   patchMihomoConfig,
   getTrayIconStatus,
@@ -84,28 +85,46 @@ export const buildContextMenu = async (): Promise<Menu> => {
           id: group.name,
           label: groupLabel,
           type: 'submenu' as const,
-          submenu: group.all.map((proxy) => {
-            const delay = proxy.history.length ? proxy.history[proxy.history.length - 1].delay : -1
-            let displayDelay = `(${delay}ms)`
-            if (delay === -1) {
-              displayDelay = ''
-            }
-            if (delay === 0) {
-              displayDelay = '(Timeout)'
-            }
-            return {
-              id: proxy.name,
-              label: `${proxy.name}   ${displayDelay}`,
-              type: 'radio' as const,
-              checked: proxy.name === group.now,
+          submenu: [
+            {
+              id: `${group.name}-delay-test`,
+              label: t('tray.delayTest'),
+              type: 'normal' as const,
               click: async (): Promise<void> => {
-                await mihomoChangeProxy(group.name, proxy.name)
-                if (autoCloseConnection) {
-                  await mihomoCloseAllConnections()
+                try {
+                  await mihomoGroupDelay(group.name, group.testUrl)
+                  mainWindow?.webContents.send('groupsUpdated')
+                } catch (error) {
+                  await trayLogger.error(`Failed to test proxy group delay: ${group.name}`, error)
                 }
               }
-            }
-          })
+            },
+            { type: 'separator' as const },
+            ...group.all.map((proxy) => {
+              const delay = proxy.history.length
+                ? proxy.history[proxy.history.length - 1].delay
+                : -1
+              let displayDelay = `(${delay}ms)`
+              if (delay === -1) {
+                displayDelay = ''
+              }
+              if (delay === 0) {
+                displayDelay = '(Timeout)'
+              }
+              return {
+                id: proxy.name,
+                label: `${proxy.name}   ${displayDelay}`,
+                type: 'radio' as const,
+                checked: proxy.name === group.now,
+                click: async (): Promise<void> => {
+                  await mihomoChangeProxy(group.name, proxy.name)
+                  if (autoCloseConnection) {
+                    await mihomoCloseAllConnections()
+                  }
+                }
+              }
+            })
+          ]
         }
       })
 

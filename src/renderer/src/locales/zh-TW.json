@@ -698,6 +698,7 @@
   "tray.tun": "虛擬網卡",
   "tray.profiles": "訂閱配置",
   "tray.proxyGroups": "代理分組",
+  "tray.delayTest": "延遲測試",
   "tray.openDirectories.title": "打開目錄",
   "tray.openDirectories.appDir": "應用目錄",
   "tray.openDirectories.workDir": "工作目錄",

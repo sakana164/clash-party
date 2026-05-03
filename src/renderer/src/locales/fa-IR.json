@@ -662,6 +662,7 @@
   "tray.tun": "TUN",
   "tray.profiles": "پروفایل‌ها",
   "tray.proxyGroups": "گروه‌های پراکسی",
+  "tray.delayTest": "تست تاخیر",
   "tray.openDirectories.title": "باز کردن پوشه‌ها",
   "tray.openDirectories.appDir": "پوشه برنامه",
   "tray.openDirectories.workDir": "پوشه کاری",

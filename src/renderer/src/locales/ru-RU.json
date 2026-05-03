@@ -664,6 +664,7 @@
   "tray.tun": "TUN",
   "tray.profiles": "Профили",
   "tray.proxyGroups": "Группы прокси",
+  "tray.delayTest": "Тест задержки",
   "tray.openDirectories.title": "Открыть директории",
   "tray.openDirectories.appDir": "Директория приложения",
   "tray.openDirectories.workDir": "Рабочая директория",

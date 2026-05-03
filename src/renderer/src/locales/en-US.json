@@ -698,6 +698,7 @@
   "tray.tun": "TUN",
   "tray.profiles": "Profiles",
   "tray.proxyGroups": "Proxy Groups",
+  "tray.delayTest": "Delay Test",
   "tray.openDirectories.title": "Open Directories",
   "tray.openDirectories.appDir": "App Directory",
   "tray.openDirectories.workDir": "Work Directory",
