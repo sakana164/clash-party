@@ -552,6 +552,8 @@
   "profiles.editRules.noResolve": "Пропустить DNS-резолвинг (no-resolve)",
   "profiles.editRules.src": "Сопоставить исходный IP (src)",
   "profiles.openFile": "Открыть файл",
+  "profiles.deleteConfirm.title": "Подтвердить удаление подписки",
+  "profiles.deleteConfirm.content": "Удалить подписку \"{{name}}\"? Это действие нельзя отменить.",
   "profiles.qrCode.title": "QR-код подписки",
   "profiles.qrCode.show": "Показать QR-код",
   "profiles.home": "Главная",

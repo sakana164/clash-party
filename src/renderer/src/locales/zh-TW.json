@@ -581,6 +581,8 @@
   "profiles.editRules.noResolve": "跳過 DNS 解析 (no-resolve)",
   "profiles.editRules.src": "匹配源 IP (src)",
   "profiles.openFile": "打開檔案",
+  "profiles.deleteConfirm.title": "確認刪除訂閱",
+  "profiles.deleteConfirm.content": "確定要刪除訂閱「{{name}}」嗎？此操作無法復原。",
   "profiles.qrCode.title": "訂閱二維碼",
   "profiles.qrCode.show": "顯示二維碼",
   "profiles.home": "主頁",

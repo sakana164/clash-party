@@ -581,6 +581,8 @@
   "profiles.editRules.noResolve": "跳过 DNS 解析 (no-resolve)",
   "profiles.editRules.src": "匹配源 IP (src)",
   "profiles.openFile": "打开文件",
+  "profiles.deleteConfirm.title": "确认删除订阅",
+  "profiles.deleteConfirm.content": "确定要删除订阅“{{name}}”吗？此操作无法撤销。",
   "profiles.qrCode.title": "订阅二维码",
   "profiles.qrCode.show": "显示二维码",
   "profiles.home": "主页",

@@ -576,6 +576,8 @@
   "profiles.editRules.noResolve": "Skip DNS Resolution (no-resolve)",
   "profiles.editRules.src": "Match Source IP (src)",
   "profiles.openFile": "Open File",
+  "profiles.deleteConfirm.title": "Confirm Subscription Deletion",
+  "profiles.deleteConfirm.content": "Delete subscription \"{{name}}\"? This action cannot be undone.",
   "profiles.qrCode.title": "Subscription QR Code",
   "profiles.qrCode.show": "Show QR Code",
   "profiles.home": "Home",
