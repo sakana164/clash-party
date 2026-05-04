@@ -173,14 +173,17 @@ const TrayIconCropModal: React.FC<Props> = (props) => {
       isOpen={true}
       onOpenChange={onCancel}
     >
-      <ModalContent className="w-fit max-w-[calc(100vw-64px)] overflow-visible bg-white">
+      <ModalContent className="w-fit max-w-[calc(100vw-64px)] overflow-visible bg-default-100">
         <ModalHeader className="flex app-drag">{t('settings.cropTrayIcon')}</ModalHeader>
         <ModalBody className="overflow-visible">
-          <Card shadow="none" className="w-fit overflow-visible rounded-none border-none bg-white">
+          <Card
+            shadow="none"
+            className="w-fit overflow-visible rounded-none border-none bg-default-100"
+          >
             <CardBody className="items-center overflow-visible p-2">
               <div
                 ref={wrapperRef}
-                className="relative inline-block max-h-[60vh] max-w-[calc(100vw-176px)] touch-none select-none overflow-visible rounded-none bg-white"
+                className="relative inline-block max-h-[60vh] max-w-[calc(100vw-176px)] touch-none select-none overflow-visible rounded-none bg-default-100"
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 onPointerCancel={handlePointerUp}
