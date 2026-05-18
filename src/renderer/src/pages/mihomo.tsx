@@ -1219,7 +1219,7 @@ const Mihomo: React.FC = () => {
                       <Input
                         size="sm"
                         fullWidth
-                        placeholder={t('mihomo.username.placeholder')}
+                        placeholder={t('mihomo.ipSegment.placeholder')}
                         value={ipcidr || ''}
                         onValueChange={(v) => {
                           if (index === lanDisallowedIpsInput.length) {
