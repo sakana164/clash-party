@@ -36,6 +36,7 @@ import {
   setupAppLifecycle,
   getSystemLanguage
 } from './lifecycle'
+import { configurePortableUserData } from './utils/dirs'
 
 function getWindowsPowerShellMajorVersion(): number | null {
   const registryKeys = [
@@ -79,6 +80,8 @@ if (process.platform === 'win32') {
     // ignore
   }
 }
+
+configurePortableUserData()
 
 const mainLogger = createLogger('Main')
 
