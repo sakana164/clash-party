@@ -18,6 +18,7 @@ type SiderCardKey =
   | 'substore'
   | 'network'
   | 'usage'
+type NetworkInfoCardKey = 'ip' | 'topology' | 'latency'
 type AppTheme = 'system' | 'light' | 'dark'
 type MihomoGroupType = 'Selector' | 'URLTest' | 'Fallback' | 'LoadBalance' | 'Relay'
 type Priority =
@@ -344,6 +345,7 @@ interface IAppConfig {
   delayTestTimeout?: number
   networkLatencyTargets?: INetworkLatencyTarget[]
   networkIPProvider?: 'ip.sb' | 'ipwho.is' | 'ipapi.is'
+  networkInfoCardOrder?: NetworkInfoCardKey[]
   subscriptionTimeout?: number
   encryptedPassword?: number[]
   controlDns?: boolean

@@ -27,6 +27,7 @@ export const defaultConfig: IAppConfig = {
   autoCloseConnection: true,
   subscriptionTimeout: 30000,
   networkLatencyTargets: [],
+  networkInfoCardOrder: ['ip', 'topology', 'latency'],
   useNameserverPolicy: false,
   controlDns: true,
   controlSniff: true,
